@@ -18,6 +18,8 @@ import os_client_config.defaults
 
 from tempest_lib import auth
 
+from meso import ksa_provider
+
 
 def get_client_manager(name=None, **kwargs):
     return Cloud(name, **kwargs).get_os_clients()
@@ -71,3 +73,28 @@ class Cloud(object):
         credentials = auth.get_credentials(auth_url, fill_in=True,
                                            **provider_kwargs)
         return provider_class(credentials, auth_url)
+
+
+class KSACloud(object):
+    def __init__(self, session, name=None, build_interval=1, build_timeout=60,
+                 disable_ssl_certificate_validation=False, ca_certs=None,
+                 trace_requests='', cloud_config=None):
+        if not cloud_config:
+            config = os_client_config.OpenStackConfig()
+            if not name:
+                self.cloud_config = config.get_all_clouds()[0]
+            else:
+                self.cloud_config = config.get_one_cloud(name)
+        else:
+            self.cloud_config = cloud_config
+        auth_provider = ksa_provider.KSAAuthProvider(session)
+        dscv = disable_ssl_certificate_validation
+        self.common_rest_client_kwargs = {
+            'auth_provider': auth_provider,
+            'region': self.cloud_config.get_region_name(),
+            'build_interval': build_interval,
+            'build_timeout': build_timeout,
+            'disable_ssl_certificate_validation': dscv,
+            'ca_certs': ca_certs,
+            'trace_requests': trace_requests,
+        }
