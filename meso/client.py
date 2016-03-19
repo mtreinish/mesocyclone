@@ -16,7 +16,7 @@
 import os_client_config
 import os_client_config.defaults
 
-from tempest_lib import auth
+from tempest.lib import auth
 
 from meso import ksa_provider
 
