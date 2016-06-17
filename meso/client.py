@@ -42,6 +42,10 @@ class Cloud(object):
         provider_args = self.cloud_config.get_auth_args()
         provider_args['auth_version'] = self.cloud_config.get_api_version(
             'identity')
+        if provider_args['auth_version'] not in provider_args['auth_url']:
+            provider_args['auth_url'] = os.path.join(
+                provider_args['auth_url'],
+                'v' + provider_args['auth_version'])
         auth_provider = self._get_auth_provider(**provider_args)
         dscv = disable_ssl_certificate_validation
         # All that is missing is the service key which is the service_type for
