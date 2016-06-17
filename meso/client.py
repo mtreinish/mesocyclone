@@ -12,10 +12,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import os
 
 import os_client_config
 import os_client_config.defaults
-
 from tempest.lib import auth
 
 from meso import ksa_provider
@@ -28,13 +28,17 @@ def get_client_manager(name=None, **kwargs):
 class Cloud(object):
     def __init__(self, name=None, build_interval=1, build_timeout=60,
                  disable_ssl_certificate_validation=False, ca_certs=None,
-                 trace_requests=''):
+                 trace_requests='', default_domain=None):
         super(Cloud, self).__init__()
         config = os_client_config.OpenStackConfig()
         if not name:
             self.cloud_config = config.get_all_clouds()[0]
         else:
             self.cloud_config = config.get_one_cloud(name)
+        self.default_domain = default_domain
+        if not self.default_domain:
+            self.default_domain = os.environ.get(
+                'OS_DEFAULT_DOMAIN', 'default')
         provider_args = self.cloud_config.get_auth_args()
         provider_args['auth_version'] = self.cloud_config.get_api_version(
             'identity')
@@ -57,7 +61,8 @@ class Cloud(object):
         pass
 
     def _get_auth_provider(self, username, password, project_name,
-                           auth_url, auth_version='3'):
+                           auth_url, user_domain_name=None,
+                           project_domain_name=None, auth_version='3'):
         provider_kwargs = {
             'username': username,
             'password': password,
@@ -66,6 +71,18 @@ class Cloud(object):
             provider_kwargs['identity_version'] = 'v3'
             provider_kwargs['project_name'] = project_name
             provider_class = auth.KeystoneV3AuthProvider
+            if not project_domain_name and not user_domain_name:
+                provider_kwargs['user_domain_name'] = self.default_domain
+                provider_kwargs['project_domain_name'] = self.default_domain
+            elif project_domain_name:
+                provider_kwargs['project_domain_name'] = project_domain_name
+                if not user_domain_name:
+                    provider_kwargs['user_domain_name'] = project_domain_name
+                else:
+                    provider_kwargs['user_domain_name'] = user_domain_name
+            elif user_domain_name:
+                provider_kwargs['user_domain_name'] = user_domain_name
+                provider_kwargs['project_domain_name'] = user_domain_name
         else:
             provider_kwargs['identity_version'] = 'v2'
             provider_kwargs['tenant_name'] = project_name
